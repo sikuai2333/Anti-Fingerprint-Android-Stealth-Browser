@@ -12,7 +12,7 @@
 > **PhantomMAX** — это stealth-браузер нового поколения для Android. Он фундаментально изменяет механизмы рендеринга WebView и контекст JavaScript, делая ваше мобильное устройство абсолютно неотличимым от мощного ПК на Windows.
 > Обходите продвинутые алгоритмы фингерпринтинга (Cloudflare Turnstile, Akamai, DataDome) с помощью реалистичной подмены WebGL на уровне ядра и уникального криптографического шума Canvas, сохраняя 100% совместимость со сложными SPA-фреймворками (React, Svelte, Vue).
 
-[![Download APK](https://img.shields.io/badge/⬇️%20Скачать%20APK-v2.0.0-7C4DFF?style=for-the-badge)](https://github.com/Genuys/PhantomMAX/releases/latest)
+[![Download APK](https://img.shields.io/badge/⬇️%20Скачать%20APK-v2.0.0-7C4DFF?style=for-the-badge)](https://github.com/Genuys/PhantomMAX-Android-Stealth-Browser/releases/tag/1.0.0)
 
 </div>
 
