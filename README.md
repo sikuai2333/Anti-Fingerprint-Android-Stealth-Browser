@@ -9,8 +9,8 @@
 [![Version](https://img.shields.io/badge/Версия-2.0.0_Pro-success?style=for-the-badge)](https://github.com/Genuys/PhantomMAX/releases)
 [![Telegram](https://img.shields.io/badge/Telegram-Канал-26A5E4?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/TgUnlock2026)
 
-> **PhantomMAX** — это stealth-браузер нового поколения для Android. Он фундаментально изменяет механизмы рендеринга WebView и контекст JavaScript, делая ваше мобильное устройство абсолютно неотличимым от мощного ПК на Windows.
-> Обходите продвинутые алгоритмы фингерпринтинга (Cloudflare Turnstile, Akamai, DataDome) с помощью реалистичной подмены WebGL на уровне ядра и уникального криптографического шума Canvas, сохраняя 100% совместимость со сложными SPA-фреймворками (React, Svelte, Vue).
+> **PhantomMAX** 是面向 Android 的新一代隐身浏览器。它从底层重构 WebView 渲染机制与 JavaScript 上下文，让移动设备在指纹特征上高度拟真为一台高性能 Windows PC。
+> 通过内核级 WebGL 伪装与独特的 Canvas 加密噪声，可绕过高级指纹检测算法（如 Cloudflare Turnstile、Akamai、DataDome），同时保持对复杂 SPA 框架（React、Svelte、Vue）的 100% 兼容性。
 
 [![Download APK](https://img.shields.io/badge/⬇️%20Скачать%20APK-v2.0.0-7C4DFF?style=for-the-badge)](https://github.com/Genuys/PhantomMAX-Android-Stealth-Browser/releases/tag/1.0.0)
 
@@ -18,41 +18,41 @@
 
 ---
 
-## ⚡ Технологии Stealth-ядра
+## ⚡ 隐身内核技术
 
-### 🎭 Deep Spoofing Engine (Zero-Leak)
-В отличие от обычных решений, которые просто меняют User-Agent, PhantomMAX напрямую манипулирует JavaScript-прототипами браузера:
-- **Крипто-шум Canvas & WebGL** — Внедряет математически выверенные, невидимые глазу псевдослучайные отклонения в `toDataURL` и `getImageData`. Отпечаток уникален для каждой сессии и не дает "грязных" артефактов.
-- **Маскировка AudioContext** — Умное искажение буферов `getChannelData` и `AnalyserNode` для защиты от аудио-фингерпринтинга.
-- **SPA Compatibility Mode** — Продвинутые `writable: true` proxy-перехватчики. Даже самые требовательные React/Svelte сайты не упадут при проверке фейковых API браузера.
-- **Hard & Device Spoofing** — Эмулирует 8-ядерный CPU, 8ГБ RAM, точные WebGL сигнатуры Intel UHD 630, а также жестко заданные безопасные часовые пояса и локали.
+### 🎭 深度伪装引擎（Zero-Leak）
+与仅修改 User-Agent 的常规方案不同，PhantomMAX 会直接操控浏览器 JavaScript 原型链：
+- **Canvas & WebGL 加密噪声** —— 在 `toDataURL` 与 `getImageData` 中注入经过数学校准、肉眼不可见的伪随机扰动。每次会话指纹都唯一，且不会产生“脏”伪影。
+- **AudioContext 掩码处理** —— 对 `getChannelData` 与 `AnalyserNode` 缓冲区进行智能失真，抵御音频指纹追踪。
+- **SPA 兼容模式** —— 基于 `writable: true` 的高级 proxy 拦截机制。即便是苛刻的 React/Svelte 站点，在校验伪造浏览器 API 时也不会崩溃。
+- **硬件与设备伪装** —— 模拟 8 核 CPU、8GB RAM、精确的 Intel UHD 630 WebGL 特征，并强制使用安全时区与区域设置。
 
-### 🌐 Универсальное ядро туннелирования
-Встроенный, надежный сетевой стек:
-- **Интеграция VLESS / Xray** — Подключение напрямую к продвинутым XTLS протоколам для обхода самых жестких блокировок DPI (ТМЧУ/Роскомнадзор).
-- **Нативная поддержка SOCKS5 & HTTP** — Полный перехват и туннелирование всего трафика внутри Chromium.
-- **Распознавание ссылок Telegram** — Просто нажмите на любую ссылку `tg://proxy?server=...` для мгновенного подключения к MTProto.
-- **Пинг-аналитика (Ping-Test)** — Моментальная проверка валидности и задержки ICMP до прокси прямо в приложении.
+### 🌐 通用隧道内核
+内置稳定可靠的网络栈：
+- **VLESS / Xray 集成** —— 直接连接高级 XTLS 协议，绕过高强度 DPI 封锁。
+- **原生支持 SOCKS5 & HTTP** —— 在 Chromium 内实现全流量拦截与隧道转发。
+- **Telegram 链接识别** —— 点击任意 `tg://proxy?server=...` 链接即可即时接入 MTProto。
+- **延迟分析（Ping-Test）** —— 在应用内快速检测代理可用性与 ICMP 延迟。
 
-### ⚔️ Защита нулевого кольца (Zero Compromise)
-Абсолютная изоляция аппаратной части Android:
-- **WebRTC Kill-Switch** — Полное уничтожение прототипов `RTCPeerConnection` для предотвращения утечек реального IP через STUN/TURN протоколы.
-- **Сенсорная стерилизация** — Удаляет `DeviceMotionEvent` и `DeviceOrientationEvent` — трекеры не узнают, как вы держите телефон.
-- **Жёсткая блокировка Media** — Перехват `navigator` API для глухого отказа доступа к камере, микрофону и GPS (геолокации). Сайты получают тихий отказ и даже не показывают нативные запросы разрешений Android.
-- **Очистка X-Android заголовков** — Ядро автоматически внедряется в `fetch` и `XMLHttpRequest`, бесшумно удаляя любые системные заголовки вроде `X-Android-Package`, выдающие WebView.
+### ⚔️ 零环防护（Zero Compromise）
+对 Android 硬件层进行彻底隔离：
+- **WebRTC Kill-Switch** —— 完整移除 `RTCPeerConnection` 原型，防止通过 STUN/TURN 泄露真实 IP。
+- **传感器净化** —— 禁用 `DeviceMotionEvent` 与 `DeviceOrientationEvent`，避免站点推断持机姿态。
+- **媒体硬阻断** —— 拦截 `navigator` API，静默拒绝相机、麦克风与 GPS（地理位置）访问；站点仅收到拒绝结果，不会触发原生 Android 权限弹窗。
+- **X-Android 请求头清洗** —— 内核自动注入 `fetch` 与 `XMLHttpRequest`，静默移除 `X-Android-Package` 等暴露 WebView 身份的系统头。
 
 ---
 
-## 🛠 Сборка и установка для разработчиков
+## 🛠 面向开发者的构建与安装
 
-| Инструмент | Поддерживаемые версии |
+| 工具 | 支持版本 |
 |---|---|
-| **Среда разработки** | Android Studio Jellyfish (или новее) |
+| **开发环境** | Android Studio Jellyfish（或更新版本） |
 | **Java** | JDK 17 |
-| **SDK** | Android SDK 26+ (Target 34) |
-| **Сборщик** | Gradle 8.2+ |
+| **SDK** | Android SDK 26+（Target 34） |
+| **构建工具** | Gradle 8.2+ |
 
-### Быстрый старт (CLI)
+### 快速开始（CLI）
 
 ```bash
 git clone https://github.com/Genuys/PhantomMAX.git
@@ -60,20 +60,20 @@ cd PhantomMAX
 ./gradlew assembleRelease
 ```
 
-*Готовый APK будет лежать в директории: `app/build/outputs/apk/release/`*
+*构建完成后的 APK 位于：`app/build/outputs/apk/release/`*
 
 ---
 
-## 🧪 Как PhantomMAX обманывает трекеры?
+## 🧪 PhantomMAX 如何欺骗追踪器？
 
-Обычные браузеры (и другие Anti-Detect WebView) оставляют массивный след системной идентификации Android. Взгляните на разницу:
+普通浏览器（以及其他 Anti-Detect WebView）通常会留下大量 Android 系统识别痕迹。对比如下：
 
 ```text
-[Tracker] запрашивает navigator.userAgentData.getHighEntropyValues()
+[Tracker] 请求 navigator.userAgentData.getHighEntropyValues()
    ↓
-[PhantomMAX JS Core] нативно перехватывает промис проверки
+[PhantomMAX JS Core] 原生拦截该检测 Promise
    ↓
-Возвращает: Promise<Object> {
+返回：Promise<Object> {
   architecture: "x86",
   bitness: "64",
   brands: ["Google Chrome", "Chromium"],
@@ -81,31 +81,31 @@ cd PhantomMAX
   platform: "Windows", ...
 }
    ↓
-[Tracker] анализирует пиксели CanvasRenderingContext2D.getImageData()
+[Tracker] 分析 CanvasRenderingContext2D.getImageData() 像素
    ↓
-[PhantomMAX JS Core] на лету применяет алгоритмический Xorshift32 крипто-шум
+[PhantomMAX JS Core] 实时应用基于 Xorshift32 的算法加密噪声
    ↓
-[Tracker] фиксирует "чистый", но 100% фейковый и уникальный отпечаток устройства.
+[Tracker] 记录到“干净”、但 100% 伪造且唯一的设备指纹。
 ```
 
 ---
 
-## 📂 Структура системы
+## 📂 系统结构
 
 ```text
 PhantomMAX/app/src/main/java/com/phantommax/app/
-├── SpoofingEngine.kt        # Сердце защиты: инъекции JS-ядра и SPA-безопасные proxy-отделы
-├── PhantomWebViewClient.kt  # Перехватчик трафика, ошибок HTTP и сборщик WebRTC
-├── HeaderManager.kt         # Эмуляция Client Hints заголовков Chrome 134 Десктоп
-├── ProxyManager.kt          # Подсистема туннелей VLESS, SOCKS5 и HTTP
-├── ProxyConfig.kt           # Интеллектуальный парсер прокси-ссылок и TG-URI
-├── MainActivity.kt          # Контроллер UI графического интерфейса
-└── PhantomApp.kt            # Изолированный Application, управление сидами и флагами сессий
+├── SpoofingEngine.kt        # 防护核心：JS 内核注入与 SPA 安全 proxy 模块
+├── PhantomWebViewClient.kt  # 流量与 HTTP 错误拦截器，含 WebRTC 防泄露处理
+├── HeaderManager.kt         # 模拟 Chrome 134 桌面端 Client Hints 请求头
+├── ProxyManager.kt          # VLESS、SOCKS5、HTTP 隧道子系统
+├── ProxyConfig.kt           # 代理链接与 TG-URI 智能解析器
+├── MainActivity.kt          # 图形界面 UI 控制器
+└── PhantomApp.kt            # 隔离式 Application，管理随机种子与会话标志
 ```
 
 ---
 
-## 🤝 Сообщество и поддержка
+## 🤝 社区与支持
 
 <div align="center">
 
@@ -117,5 +117,5 @@ PhantomMAX/app/src/main/java/com/phantommax/app/
 <div align="center">
 <br/>
 <img src="https://capsule-render.vercel.app/api?type=waving&color=7C4DFF&height=100&section=footer" width="100%"/>
-<sub>Engineered for absolute privacy. <b>PhantomMAX Team</b> 2026</sub>
+<sub>为绝对隐私而生。<b>PhantomMAX Team</b> 2026</sub>
 </div>
