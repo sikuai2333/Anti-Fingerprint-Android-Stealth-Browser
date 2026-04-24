@@ -20,6 +20,7 @@ class PhantomApp : Application() {
         var blockMicrophone: Boolean = true
         var blockLocation: Boolean = true
         var savedProxyString: String = ""
+        var bypassDomainsCsv: String = "localhost,127.0.0.1,.local"
         
         var blockNetInBackground: Boolean = true
         var showSecurityAlert: Boolean = true
@@ -42,6 +43,7 @@ class PhantomApp : Application() {
             blockMicrophone = prefs.getBoolean("blockMicrophone", true)
             blockLocation = prefs.getBoolean("blockLocation", true)
             savedProxyString = prefs.getString("savedProxyString", "") ?: ""
+            bypassDomainsCsv = prefs.getString("bypassDomainsCsv", "localhost,127.0.0.1,.local") ?: "localhost,127.0.0.1,.local"
             blockNetInBackground = prefs.getBoolean("blockNetInBackground", true)
             showSecurityAlert = prefs.getBoolean("showSecurityAlert", true)
         }
@@ -58,6 +60,7 @@ class PhantomApp : Application() {
                 putBoolean("blockMicrophone", blockMicrophone)
                 putBoolean("blockLocation", blockLocation)
                 putString("savedProxyString", savedProxyString)
+                putString("bypassDomainsCsv", bypassDomainsCsv)
                 putBoolean("blockNetInBackground", blockNetInBackground)
                 putBoolean("showSecurityAlert", showSecurityAlert)
                 apply()
@@ -69,6 +72,7 @@ class PhantomApp : Application() {
         super.onCreate()
         if (sessionSeed == 0L) regenerateSeed()
         loadSettings(this)
+        ProxyManager.setBypassRules(bypassDomainsCsv)
         
         if (savedProxyString.isNotEmpty()) {
             val config = ProxyConfig.parse(savedProxyString)

@@ -1,11 +1,13 @@
 package com.phantommax.app
 
 import android.graphics.Bitmap
+import android.webkit.MimeTypeMap
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.webkit.WebViewFeature
+import java.io.ByteArrayInputStream
 
 class PhantomWebViewClient(
     private val onPageLoadStarted: (() -> Unit)? = null,
@@ -22,15 +24,38 @@ clearWatch:function(){}
 try{if(navigator.permissions){var _oq=navigator.permissions.query.bind(navigator.permissions);navigator.permissions.query=function(d){if(d&&(d.name==='geolocation'||d.name==='camera'||d.name==='microphone'||d.name==='notifications'))return Promise.resolve({state:'denied',onchange:null,addEventListener:function(){},removeEventListener:function(){}});return _oq(d);};}}catch(ex){}
 })();"""
 
-    private fun getSpoofScript() = SpoofingEngine.generateScript(
-        PhantomApp.sessionSeed, PhantomApp.isDesktopMode
+    private fun getSpoofScript(forceDesktop: Boolean) = SpoofingEngine.generateScript(
+        PhantomApp.sessionSeed, forceDesktop || PhantomApp.isDesktopMode
     )
+
+    private fun injectScript(view: WebView?, stage: String, script: String) {
+        if (view == null) return
+        SpoofMetrics.recordAttempt(stage)
+        try {
+            view.evaluateJavascript(script) {
+                SpoofMetrics.recordSuccess()
+            }
+        } catch (e: Exception) {
+            SpoofMetrics.recordFailure(e.message ?: "unknown script error")
+        }
+    }
 
     override fun shouldInterceptRequest(
         view: WebView?,
         request: WebResourceRequest?
     ): WebResourceResponse? {
+        val url = request?.url?.toString().orEmpty()
+        val profile = SpoofProfileManager.resolve(url)
+        if (profile.blockTrackers && url.isNotEmpty() && TrackerBlocker.shouldBlock(url)) {
+            return emptyResponse(url)
+        }
         return null
+    }
+
+    private fun emptyResponse(url: String): WebResourceResponse {
+        val ext = MimeTypeMap.getFileExtensionFromUrl(url).lowercase()
+        val mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext) ?: "text/plain"
+        return WebResourceResponse(mime, "UTF-8", ByteArrayInputStream(ByteArray(0)))
     }
 
     override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
@@ -42,17 +67,25 @@ try{if(navigator.permissions){var _oq=navigator.permissions.query.bind(navigator
     override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
         super.onPageStarted(view, url, favicon)
         onPageLoadStarted?.invoke()
-        view?.evaluateJavascript(getSpoofScript(), null)
-        if (PhantomApp.blockLocation) {
-            view?.evaluateJavascript(geoBlockScript, null)
+        val profile = SpoofProfileManager.resolve(url)
+        if (profile.injectSpoof) {
+            injectScript(view, "onPageStarted:spoof:${profile.name}", getSpoofScript(profile.forceDesktopMode))
+        }
+        if (PhantomApp.blockLocation && profile.injectSpoof) {
+            injectScript(view, "onPageStarted:geo", geoBlockScript)
         }
     }
 
     override fun onPageFinished(view: WebView?, url: String?) {
         super.onPageFinished(view, url)
         onPageLoadFinished?.invoke()
-        view?.evaluateJavascript(geoBlockScript, null)
-        view?.evaluateJavascript(getSpoofScript(), null)
+        val profile = SpoofProfileManager.resolve(url)
+        if (PhantomApp.blockLocation && profile.injectSpoof) {
+            injectScript(view, "onPageFinished:geo", geoBlockScript)
+        }
+        if (profile.injectSpoof) {
+            injectScript(view, "onPageFinished:spoof:${profile.name}", getSpoofScript(profile.forceDesktopMode))
+        }
     }
 
     override fun onReceivedError(
@@ -110,6 +143,6 @@ try{if(navigator.permissions){var _oq=navigator.permissions.query.bind(navigator
         handler: android.webkit.SslErrorHandler?,
         error: android.net.http.SslError?
     ) {
-        handler?.proceed()
+        handler?.cancel()
     }
 }
