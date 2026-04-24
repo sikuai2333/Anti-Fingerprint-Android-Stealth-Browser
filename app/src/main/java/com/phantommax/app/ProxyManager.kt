@@ -10,11 +10,9 @@ import java.util.UUID
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
-import javax.net.ssl.SSLContext
+import javax.net.ssl.HttpsURLConnection
 import javax.net.ssl.SSLSocket
-import javax.net.ssl.TrustManager
-import javax.net.ssl.X509TrustManager
-import java.security.cert.X509Certificate
+import javax.net.ssl.SNIHostName
 
 object ProxyManager {
 
@@ -41,7 +39,35 @@ object ProxyManager {
     var detectedIp: String = ""
         private set
 
+    @Volatile
+    private var bypassDomains: Set<String> = setOf("localhost", "127.0.0.1", ".local")
+
     fun isVlessActive(): Boolean = vlessActive
+
+    fun setBypassRules(csv: String) {
+        bypassDomains = csv.split(",")
+            .map { it.trim().lowercase() }
+            .filter { it.isNotBlank() }
+            .toSet()
+    }
+
+    fun getBypassRulesCsv(): String = bypassDomains.joinToString(",")
+
+    fun shouldBypassHost(host: String?): Boolean {
+        val h = host?.trim()?.lowercase().orEmpty()
+        if (h.isBlank()) return false
+        return bypassDomains.any { rule ->
+            when {
+                rule.startsWith(".") -> h.endsWith(rule)
+                else -> h == rule
+            }
+        }
+    }
+
+    fun routeForUrl(url: String?): String {
+        val host = runCatching { java.net.URI(url ?: "").host }.getOrNull()
+        return if (shouldBypassHost(host)) "DIRECT" else "PROXY"
+    }
 
     fun ping(config: ProxyConfig, callback: (Long) -> Unit) {
         Thread {
@@ -247,29 +273,28 @@ object ProxyManager {
 
     private fun createVlessTunnel(config: ProxyConfig, destHost: String, destPort: Int): Socket? {
         return try {
-            val trustAll = arrayOf<TrustManager>(object : X509TrustManager {
-                override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
-                override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
-                override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
-            })
-
-            val sslContext = SSLContext.getInstance("TLSv1.3")
-            sslContext.init(null, trustAll, java.security.SecureRandom())
-
-            val factory = sslContext.socketFactory
+            val factory = javax.net.ssl.SSLSocketFactory.getDefault() as javax.net.ssl.SSLSocketFactory
             val rawSocket = Socket()
             rawSocket.connect(InetSocketAddress(config.host, config.port), 10000)
 
             val sslSocket = factory.createSocket(rawSocket, config.sni.ifEmpty { config.host }, config.port, true) as SSLSocket
 
             val params = sslSocket.sslParameters
-            params.serverNames = listOf(javax.net.ssl.SNIHostName(config.sni.ifEmpty { config.host }))
+            val targetHost = config.sni.ifEmpty { config.host }
+            params.serverNames = listOf(SNIHostName(targetHost))
+            params.endpointIdentificationAlgorithm = "HTTPS"
 
             val protocols = arrayOf("TLSv1.3", "TLSv1.2")
             params.protocols = protocols
             sslSocket.sslParameters = params
 
             sslSocket.startHandshake()
+            val verified = HttpsURLConnection.getDefaultHostnameVerifier()
+                .verify(targetHost, sslSocket.session)
+            if (!verified) {
+                sslSocket.close()
+                return null
+            }
 
             val sslOut = sslSocket.getOutputStream()
             val vlessHeader = buildVlessHeader(config.uuid, destHost, destPort)
@@ -356,6 +381,10 @@ object ProxyManager {
                         java.net.URL(endpoint).openConnection(socks)
                     }
                     currentProxy != null -> {
+                        val host = runCatching { java.net.URL(endpoint).host }.getOrNull()
+                        if (shouldBypassHost(host)) {
+                            java.net.URL(endpoint).openConnection()
+                        } else {
                         val p = currentProxy!!
                         val proxy = when (p.type) {
                             ProxyConfig.Type.SOCKS5 -> java.net.Proxy(java.net.Proxy.Type.SOCKS, InetSocketAddress(p.host, p.port))
@@ -363,6 +392,7 @@ object ProxyManager {
                             else -> java.net.Proxy.NO_PROXY
                         }
                         java.net.URL(endpoint).openConnection(proxy)
+                        }
                     }
                     else -> java.net.URL(endpoint).openConnection()
                 }

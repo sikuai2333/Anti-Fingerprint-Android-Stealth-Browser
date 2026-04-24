@@ -231,7 +231,7 @@ class MainActivity : AppCompatActivity() {
         settings.domStorageEnabled = true
         settings.databaseEnabled = true
         settings.cacheMode = WebSettings.LOAD_DEFAULT
-        settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+        settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
         settings.userAgentString = HeaderManager.getUA(PhantomApp.isDesktopMode)
         settings.useWideViewPort = true
         settings.loadWithOverviewMode = true
@@ -299,7 +299,9 @@ class MainActivity : AppCompatActivity() {
         fun doLoad() {
             if (!urlLoaded && webView === wv) {
                 urlLoaded = true
-                wv.loadUrl("https://web.max.ru")
+                val entryUrl = "https://web.max.ru"
+                val profile = SpoofProfileManager.resolve(entryUrl)
+                wv.loadUrl(entryUrl, HeaderManager.getHeaders(profile.forceDesktopMode || PhantomApp.isDesktopMode))
             }
         }
 
@@ -536,10 +538,12 @@ class MainActivity : AppCompatActivity() {
         switchBlockLocation.setOnCheckedChangeListener { _, c -> PhantomApp.blockLocation = c; saveAppPrefs() }
         switchBlockNetBack.setOnCheckedChangeListener { _, c -> PhantomApp.blockNetInBackground = c; saveAppPrefs() }
         switchShowAlert.setOnCheckedChangeListener { _, c -> PhantomApp.showSecurityAlert = c; saveAppPrefs() }
+        ProxyManager.setBypassRules(PhantomApp.bypassDomainsCsv)
 
         fun updateLogs() {
             val log = SpoofingEngine.getSpoofLog(PhantomApp.sessionSeed, PhantomApp.isDesktopMode)
-            runOnUiThread { tvSpoofLog.text = log.ifBlank { "Пусто" } }
+            val metrics = SpoofMetrics.snapshotText()
+            runOnUiThread { tvSpoofLog.text = (log.ifBlank { "Пусто" } + "\n\n" + metrics).trim() }
         }
 
         fun showPage(index: Int) {
@@ -557,7 +561,9 @@ class MainActivity : AppCompatActivity() {
             val ua = HeaderManager.getUA(PhantomApp.isDesktopMode)
             val chromeVer = Regex("Chrome/(\\d+)").find(ua)?.groupValues?.get(1) ?: "?"
             val mode = if (PhantomApp.isDesktopMode) "Desktop" else "Mobile"
-            tvSpoofFingerprint.text = "Chrome $chromeVer | $mode | Seed: ${PhantomApp.sessionSeed and 0xFFFF}\n${ua.take(80)}..."
+            val profile = SpoofProfileManager.resolve(webView?.url)
+            tvSpoofFingerprint.text = "Chrome $chromeVer | $mode | Profile:${profile.name} | Seed: ${PhantomApp.sessionSeed and 0xFFFF}\n${ua.take(80)}..."
+            val route = ProxyManager.routeForUrl(webView?.url)
 
             if (proxy != null) {
                 tvProxyStatus.text = "✅ Подключено"
@@ -565,11 +571,11 @@ class MainActivity : AppCompatActivity() {
                 tvIp.text = ProxyManager.detectedIp.ifEmpty { "⏳ определяется..." }
                 tvPing.text = if (ProxyManager.lastPingMs >= 0) "${ProxyManager.lastPingMs} мс" else "—"
                 tvCountry.text = ProxyManager.detectedCountry.ifEmpty { "⏳ определяется..." }
-                tvProxyType.text = proxy.type.name
+                tvProxyType.text = "${proxy.type.name} | Route:$route"
             } else {
                 tvProxyStatus.text = "⛔ Отключено"
                 tvProxyStatus.setTextColor(0xFFFF5252.toInt())
-                tvIp.text = "—"; tvPing.text = "—"; tvCountry.text = "—"; tvProxyType.text = "—"
+                tvIp.text = "—"; tvPing.text = "—"; tvCountry.text = "—"; tvProxyType.text = "Route:$route"
             }
         }
 
