@@ -30,6 +30,7 @@ import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SwitchCompat
+import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.tabs.TabLayout
@@ -40,6 +41,7 @@ import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 
 class MainActivity : AppCompatActivity() {
+    private lateinit var settingsStateViewModel: SettingsStateViewModel
 
     private var webView: WebView? = null
     private lateinit var webViewContainer: FrameLayout
@@ -57,6 +59,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        settingsStateViewModel = ViewModelProvider(this)[SettingsStateViewModel::class.java]
         setupViews()
         setupBackPressed()
 
@@ -571,24 +574,23 @@ class MainActivity : AppCompatActivity() {
         fun updateStatus() {
             val proxy = ProxyManager.currentProxy
             val ua = HeaderManager.getUA(PhantomApp.isDesktopMode)
-            val chromeVer = Regex("Chrome/(\\d+)").find(ua)?.groupValues?.get(1) ?: "?"
-            val mode = if (PhantomApp.isDesktopMode) "Desktop" else "Mobile"
-            val profile = SpoofProfileManager.resolve(webView?.url)
-            tvSpoofFingerprint.text = "Chrome $chromeVer | $mode | Profile:${profile.name} | Seed: ${PhantomApp.sessionSeed and 0xFFFF}\n${ua.take(80)}..."
-            val route = ProxyManager.routeForUrl(webView?.url)
-
-            if (proxy != null) {
-                tvProxyStatus.text = "✅ Подключено"
-                tvProxyStatus.setTextColor(0xFF00E676.toInt())
-                tvIp.text = ProxyManager.detectedIp.ifEmpty { "⏳ определяется..." }
-                tvPing.text = if (ProxyManager.lastPingMs >= 0) "${ProxyManager.lastPingMs} мс" else "—"
-                tvCountry.text = ProxyManager.detectedCountry.ifEmpty { "⏳ определяется..." }
-                tvProxyType.text = "${proxy.type.name} | Route:$route"
-            } else {
-                tvProxyStatus.text = "⛔ Отключено"
-                tvProxyStatus.setTextColor(0xFFFF5252.toInt())
-                tvIp.text = "—"; tvPing.text = "—"; tvCountry.text = "—"; tvProxyType.text = "Route:$route"
-            }
+            val status = settingsStateViewModel.buildStatusState(
+                proxy = proxy,
+                ua = ua,
+                isDesktopMode = PhantomApp.isDesktopMode,
+                seed = PhantomApp.sessionSeed,
+                currentUrl = webView?.url,
+                detectedIp = ProxyManager.detectedIp,
+                lastPingMs = ProxyManager.lastPingMs,
+                detectedCountry = ProxyManager.detectedCountry
+            )
+            tvSpoofFingerprint.text = status.fingerprintText
+            tvProxyStatus.text = status.proxyStatusText
+            tvProxyStatus.setTextColor(status.proxyStatusColor)
+            tvIp.text = status.ipText
+            tvPing.text = status.pingText
+            tvCountry.text = status.countryText
+            tvProxyType.text = status.proxyTypeText
         }
 
         btnRefreshIp.setOnClickListener {
