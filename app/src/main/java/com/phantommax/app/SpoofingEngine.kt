@@ -82,7 +82,7 @@ object SpoofingEngine {
         val dl         = 8  + rng.nextInt(18)
         val osPlatform = if (osStr.contains("Mac")) "macOS" else "Windows"
 
-        return buildScript(
+        return buildScriptModular(
             seed, chromeMain, chromeFull, notBrand,
             osStr, platform, platformVer, osPlatform,
             scW, scH, dpr, hwc, mem,
@@ -92,6 +92,67 @@ object SpoofingEngine {
             noiseR, noiseG, rectNoise, rtt, dl
         )
     }
+
+    @Suppress("LongParameterList")
+    private fun buildScriptModular(
+        seed: Long, chromeMain: String, chromeFull: String, notBrand: String,
+        osStr: String, platform: String, platformVer: String, osPlatform: String,
+        @Suppress("UNUSED_PARAMETER") scW: Int, @Suppress("UNUSED_PARAMETER") scH: Int, @Suppress("UNUSED_PARAMETER") dpr: Double,
+        hwc: Int, mem: Int, tzName: String, tzOffset: Int,
+        wglVendor: String, wglRenderer: String, ua: String,
+        totalHeap: Int, usedHeap: Int, canvasSeed: Int, noiseR: Int, noiseG: Int,
+        @Suppress("UNUSED_PARAMETER") rectNoise: Double, rtt: Int, dl: Int
+    ): String {
+        val modules = listOf(
+            moduleRuntimeGuards(seed),
+            moduleRtcAndSensors(),
+            moduleCanvasAndWebGl(canvasSeed, noiseR, noiseG, wglVendor, wglRenderer),
+            moduleAudio(seed),
+            moduleUaAndClientHints(ua, osStr, platform, platformVer, osPlatform, chromeMain, chromeFull, notBrand, hwc, mem, rtt, dl),
+            modulePrivacyAndTimezone(tzName, tzOffset, totalHeap, usedHeap)
+        )
+        return "(function(){if(window.__phantomApplied)return;window.__phantomApplied=true;${modules.joinToString(";")}})();"
+    }
+
+    private fun moduleRuntimeGuards(seed: Long): String = """
+var _S=${seed and 0x7FFFFFFFL};
+['__android_log_write','AndroidInterface','android','__ANDROID__','_phantom','mozInnerScreenX','_Selenium_IDE_Recorder'].forEach(function(n){try{delete window[n];}catch(e){}});
+""".trimIndent()
+
+    private fun moduleRtcAndSensors(): String = """
+['RTCPeerConnection','webkitRTCPeerConnection','mozRTCPeerConnection','RTCSessionDescription','RTCIceCandidate'].forEach(function(n){try{delete window[n];}catch(e){}});
+try{delete window.DeviceMotionEvent;}catch(e){}
+try{delete window.DeviceOrientationEvent;}catch(e){}
+""".trimIndent()
+
+    private fun moduleCanvasAndWebGl(canvasSeed: Int, noiseR: Int, noiseG: Int, wglVendor: String, wglRenderer: String): String = """
+var _cS=$canvasSeed;
+function _xorshift(s){s=(s^(s<<13))&0x7fffffff;s=(s^(s>>17))&0x7fffffff;s=(s^(s<<5))&0x7fffffff;return s;}
+function _injectNoise(ctx,w,h){try{var iw=Math.min(w,64),ih=Math.min(h,64);if(iw<=0||ih<=0)return;var id=ctx.getImageData(0,0,iw,ih);var d=id.data;var ls=_cS;for(var i=0;i<d.length;i+=4){ls=_xorshift(ls);d[i]=Math.max(0,Math.min(255,d[i]+$noiseR+((ls%5)-2)));ls=_xorshift(ls);d[i+1]=Math.max(0,Math.min(255,d[i+1]+$noiseG+((ls%5)-2)));}ctx.putImageData(id,0,0);}catch(e){}}
+try{var _otoDataURL=HTMLCanvasElement.prototype.toDataURL;HTMLCanvasElement.prototype.toDataURL=function(){var ctx=this.getContext('2d');if(ctx)_injectNoise(ctx,this.width,this.height);return _otoDataURL.apply(this,arguments);};}catch(e){}
+try{var _sp=function(p){if(!p)return;var _gp=p.prototype.getParameter;if(!_gp)return;p.prototype.getParameter=function(a){if(a===37445||a===0x9245)return'$wglVendor';if(a===37446||a===0x9246)return'$wglRenderer';return _gp.apply(this,arguments);};};_sp(window.WebGLRenderingContext);_sp(window.WebGL2RenderingContext);}catch(e){}
+""".trimIndent()
+
+    private fun moduleAudio(seed: Long): String = """
+try{if(window.AudioBuffer){var _gc=AudioBuffer.prototype.getChannelData;AudioBuffer.prototype.getChannelData=function(){var d=_gc.apply(this,arguments);var ls=${seed and 0x7FFFFFFFL};for(var i=0;i<d.length&&i<4096;i++){ls=(ls^(ls<<13))&0x7fffffff;d[i]=d[i]+((ls%1000-500)/10000000);}return d;};}}catch(e){}
+""".trimIndent()
+
+    @Suppress("LongParameterList")
+    private fun moduleUaAndClientHints(
+        ua: String, osStr: String, platform: String, platformVer: String, osPlatform: String,
+        chromeMain: String, chromeFull: String, notBrand: String, hwc: Int, mem: Int, rtt: Int, dl: Int
+    ): String = """
+try{Object.defineProperties(navigator,{userAgent:{get:function(){return '$ua';},configurable:true},platform:{get:function(){return '$platform';},configurable:true},hardwareConcurrency:{get:function(){return $hwc;},configurable:true},deviceMemory:{get:function(){return $mem;},configurable:true},webdriver:{get:function(){return false;},configurable:true}});}catch(e){}
+try{Object.defineProperty(navigator,'userAgentData',{value:{brands:[{brand:'Google Chrome',version:'$chromeMain'},{brand:'Chromium',version:'$chromeMain'},{brand:'Not_A Brand',version:'$notBrand'}],mobile:false,platform:'$osPlatform',getHighEntropyValues:function(){return Promise.resolve({architecture:'x86',bitness:'64',platformVersion:'$platformVer',uaFullVersion:'$chromeFull'});}},configurable:true});}catch(e){}
+try{Object.defineProperty(navigator,'connection',{get:function(){return{effectiveType:'4g',rtt:$rtt,downlink:$dl,saveData:false};},configurable:true});}catch(e){}
+""".trimIndent()
+
+    private fun modulePrivacyAndTimezone(tzName: String, tzOffset: Int, totalHeap: Int, usedHeap: Int): String = """
+try{Object.defineProperty(Date.prototype,'getTimezoneOffset',{value:function(){return -$tzOffset;},writable:true,configurable:true});}catch(e){}
+try{var _oiro=Intl.DateTimeFormat.prototype.resolvedOptions;Intl.DateTimeFormat.prototype.resolvedOptions=function(){var r=_oiro.apply(this,arguments);r.timeZone='$tzName';return r;};}catch(e){}
+try{Object.defineProperty(performance,'memory',{get:function(){return{jsHeapSizeLimit:4294705152,totalJSHeapSize:$totalHeap,usedJSHeapSize:$usedHeap};},configurable:true});}catch(e){}
+try{if(navigator.permissions){Object.defineProperty(navigator.permissions,'query',{value:function(){return Promise.resolve({state:'denied'});},configurable:true});}}catch(e){}
+""".trimIndent()
 
     private fun buildScript(
         seed: Long, chromeMain: String, chromeFull: String, notBrand: String,
