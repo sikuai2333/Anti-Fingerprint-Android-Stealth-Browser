@@ -1,38 +1,51 @@
-# 整改任务追踪（对照《指纹浏览器专项整改指南》）
+# 整改任务追踪（收尾归档版）
 
-> 规则：每完成一个任务立即标注 ✅ 已完成。
+> 状态：**已收尾**（P0/P1/P2/P3 与验证门禁全部完成）。
 
-## P0 安全基线
+## 1) 任务总览
 
-- [x] ✅ 已完成：关闭 WebView SSL 错误默认放行（`onReceivedSslError` 从 `proceed` 改为 `cancel`）。
-- [x] ✅ 已完成：移除 VLESS trust-all 证书策略，改为系统默认 TLS 信任链并增加 Hostname 校验。
-- [x] ✅ 已完成：关闭应用全局明文流量（Manifest `usesCleartextTraffic=false`）。
-- [x] ✅ 已完成：关闭 network security config 的 base-config 明文放行（`cleartextTrafficPermitted=false`）。
+- [x] P0 安全基线完成
+- [x] P1 可维护性与行为一致性完成
+- [x] P2 指纹策略工程化完成
+- [x] P3 扩展能力完成
+- [x] 验证与发布门禁完成
 
-## P1 可维护性与行为一致性
+## 2) 完成清单（摘要）
 
-- [x] ✅ 已完成：接入 `TrackerBlocker` 到 `shouldInterceptRequest`，对命中追踪请求返回空响应。
-- [x] ✅ 已完成：主入口加载 URL 时注入 HeaderManager 生成的请求头（`loadUrl(url, headers)`）。
-- [x] ✅ 已完成：将 `MainActivity` 拆分为控制器/VM，降低耦合。
-  - [x] ✅ 子任务完成：提取 WebView 生命周期控制器（`WebViewLifecycleController`）。
-  - [x] ✅ 子任务完成：提取设置页状态管理到 ViewModel（`SettingsStateViewModel`，统一状态拼装）。
-- [x] ✅ 已完成：将 Thread 模型迁移至 Coroutines + 可取消任务（`ProxyManager` 网络任务协程化 + `disconnect` 取消子任务）。
+### P0 安全基线
+- [x] 关闭 WebView SSL 错误默认放行（`cancel`）
+- [x] 移除 VLESS trust-all，改为系统 TLS + Hostname 校验
+- [x] 关闭全局 cleartext
 
-## P2 指纹策略工程化
+### P1 可维护性
+- [x] TrackerBlocker 接入请求拦截
+- [x] HeaderManager 接入主入口加载
+- [x] `MainActivity` 拆分（`WebViewLifecycleController` + `SettingsStateViewModel`）
+- [x] `ProxyManager` 线程模型迁移到 Coroutines（可取消）
 
-- [x] ✅ 已完成：拆分 `SpoofingEngine` 巨型脚本为模块化注入单元。
-  - [x] ✅ 子任务完成：拆分 UA/ClientHints 模块。
-  - [x] ✅ 子任务完成：拆分 Canvas/WebGL 模块。
-  - [x] ✅ 子任务完成：拆分 RTC/Permissions/Timezone 模块。
-- [x] ✅ 已完成：建立注入成功率/异常率监控指标（`SpoofMetrics` + 设置页日志展示）。
-- [x] ✅ 已完成：建立检测站点回归基线并加入发布前检查（`regression-baseline.md`）。
+### P2 指纹策略工程化
+- [x] `SpoofingEngine` 模块化脚本拼装（UA/CH、Canvas/WebGL、RTC/Permissions/Timezone）
+- [x] `SpoofMetrics` 注入成功率/失败率监控
+- [x] 回归基线文档落地（见 `regression-baseline.md`）
 
-## P3 扩展能力
+### P3 扩展能力
+- [x] `SpoofProfileManager` 域名策略（STRICT/BALANCED/SAFE_NO_SPOOF）
+- [x] 代理分流规则与状态可观测（DIRECT/PROXY）
 
-- [x] ✅ 已完成：按域名策略加载不同 spoof profile（`SpoofProfileManager`，含 STRICT/BALANCED/SAFE_NO_SPOOF）。
-- [x] ✅ 已完成：代理分流策略（直连/代理）与可观测面板（`ProxyManager` 路由规则 + 状态页 Route 展示）。
+## 3) 归档与文档清理
 
-## 验证与发布门禁
+为避免根目录文档过多，历史分析文档已归档到 `docs/archive/`：
 
-- [x] ✅ 已完成：已在可联网环境配置 Android SDK（API 34 / Build Tools 34.0.0）并执行 `:app:assembleDebug` 编译通过。
-- [x] ✅ 已完成：执行 `:app:testDebugUnitTest`（当前项目无单测源码，任务为 `NO-SOURCE`，构建通过）。
+- `docs/archive/项目分析与优化建议.md`
+- `docs/archive/指纹浏览器专项整改指南.md`
+
+新增收尾文档：
+
+- `变更影响与回归建议.md`
+- `release-checklist.md`
+
+## 4) 后续维护建议（非阻塞）
+
+- 保持每次功能改动后执行 `assembleDebug` + 回归清单抽样。
+- 在新增站点策略时，优先扩展 `SpoofProfileManager` 并补充回归记录。
+- 若进入正式发布，建议补充最小单元测试集（当前为 `NO-SOURCE`）。
