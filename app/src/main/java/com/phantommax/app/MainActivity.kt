@@ -50,6 +50,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var qrCardLayout: LinearLayout
     private lateinit var btnSaveQr: Button
     private lateinit var btnHideQr: ImageButton
+    private lateinit var lifecycleController: WebViewLifecycleController
     private var qrDismissed = false
     private val mainHandler = Handler(Looper.getMainLooper())
 
@@ -185,6 +186,17 @@ class MainActivity : AppCompatActivity() {
         }
 
         btnSaveQr.setOnClickListener { saveQrToGallery() }
+
+        lifecycleController = WebViewLifecycleController(
+            webViewProvider = { webView },
+            destroyWebView = {
+                webView?.destroy()
+                webView = null
+            },
+            recreateWebView = { createWebView() },
+            clearAllData = { clearAllData() },
+            hideSystemUi = { hideSystemUI() }
+        )
     }
 
     private fun animateEntrance() {
@@ -668,33 +680,14 @@ class MainActivity : AppCompatActivity() {
         webView?.clearFormData()
     }
 
-    private var isAppInBackground = false
-
     override fun onPause() {
         super.onPause()
-        isAppInBackground = true
-        if (PhantomApp.blockNetInBackground) {
-            webView?.settings?.blockNetworkLoads = true
-            webView?.pauseTimers()
-        }
-        if (PhantomApp.killOnExit) clearAllData()
-        if (PhantomApp.destroyOnMinimize) {
-            webView?.destroy()
-            webView = null
-        }
+        lifecycleController.onPause()
     }
 
     override fun onResume() {
         super.onResume()
-        isAppInBackground = false
-        hideSystemUI()
-        if (PhantomApp.blockNetInBackground) {
-            webView?.settings?.blockNetworkLoads = false
-            webView?.resumeTimers()
-        }
-        if (PhantomApp.destroyOnMinimize && webView == null) {
-            createWebView()
-        }
+        lifecycleController.onResume()
     }
 
     override fun onDestroy() {

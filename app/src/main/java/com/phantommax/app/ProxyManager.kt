@@ -13,6 +13,11 @@ import java.util.concurrent.atomic.AtomicBoolean
 import javax.net.ssl.HttpsURLConnection
 import javax.net.ssl.SSLSocket
 import javax.net.ssl.SNIHostName
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.launch
 
 object ProxyManager {
 
@@ -41,6 +46,7 @@ object ProxyManager {
 
     @Volatile
     private var bypassDomains: Set<String> = setOf("localhost", "127.0.0.1", ".local")
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     fun isVlessActive(): Boolean = vlessActive
 
@@ -70,7 +76,7 @@ object ProxyManager {
     }
 
     fun ping(config: ProxyConfig, callback: (Long) -> Unit) {
-        Thread {
+        scope.launch {
             try {
                 val start = System.currentTimeMillis()
                 val socket = Socket()
@@ -81,7 +87,7 @@ object ProxyManager {
             } catch (_: Exception) {
                 callback(-1)
             }
-        }.start()
+        }
     }
 
     fun connect(config: ProxyConfig, callback: (Boolean, String) -> Unit) {
@@ -90,7 +96,7 @@ object ProxyManager {
 
         when (config.type) {
             ProxyConfig.Type.SOCKS5 -> {
-                Thread {
+                scope.launch {
                     try {
                         val start = System.currentTimeMillis()
                         val testSocket = Socket()
@@ -103,10 +109,10 @@ object ProxyManager {
                         currentProxy = null
                         callback(false, e.message ?: "Connection failed")
                     }
-                }.start()
+                }
             }
             ProxyConfig.Type.HTTP -> {
-                Thread {
+                scope.launch {
                     try {
                         val start = System.currentTimeMillis()
                         val jProxy = java.net.Proxy(java.net.Proxy.Type.HTTP, InetSocketAddress(config.host, config.port))
@@ -122,7 +128,7 @@ object ProxyManager {
                         currentProxy = null
                         callback(false, e.message ?: "HTTP proxy connection failed")
                     }
-                }.start()
+                }
             }
             ProxyConfig.Type.VLESS -> {
                 startVlessProxy(config, callback)
@@ -131,6 +137,7 @@ object ProxyManager {
     }
 
     fun disconnect() {
+        scope.coroutineContext.cancelChildren()
         running.set(false)
         try { localSocksServer?.close() } catch (_: Exception) {}
         localSocksServer = null
@@ -148,7 +155,7 @@ object ProxyManager {
     }
 
     private fun startVlessProxy(config: ProxyConfig, callback: (Boolean, String) -> Unit) {
-        Thread {
+        scope.launch {
             try {
                 running.set(true)
                 executor = Executors.newCachedThreadPool()
@@ -157,7 +164,7 @@ object ProxyManager {
 
                 callback(true, "")
 
-                Thread {
+                scope.launch {
                     try {
                         val start = System.currentTimeMillis()
                         val testSock = createVlessTunnel(config, "www.google.com", 80)
@@ -165,7 +172,7 @@ object ProxyManager {
                         testSock?.close()
                         fetchIpInfoAsync()
                     } catch (_: Exception) {}
-                }.start()
+                }
 
                 while (running.get()) {
                     try {
@@ -180,7 +187,7 @@ object ProxyManager {
                 currentProxy = null
                 callback(false, e.message ?: "VLESS start failed")
             }
-        }.start()
+        }
     }
 
     private fun handleSocks5Client(client: Socket, config: ProxyConfig) {
@@ -363,7 +370,7 @@ object ProxyManager {
     }
 
     private fun fetchIpInfoAsync() {
-        Thread { fetchIpInfo() }.start()
+        scope.launch { fetchIpInfo() }
     }
 
     private fun fetchIpInfo() {

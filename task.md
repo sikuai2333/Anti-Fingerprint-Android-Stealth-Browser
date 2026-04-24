@@ -14,11 +14,16 @@
 - [x] ✅ 已完成：接入 `TrackerBlocker` 到 `shouldInterceptRequest`，对命中追踪请求返回空响应。
 - [x] ✅ 已完成：主入口加载 URL 时注入 HeaderManager 生成的请求头（`loadUrl(url, headers)`）。
 - [ ] ⏳ 待完成：将 `MainActivity` 拆分为控制器/VM，降低耦合。
-- [ ] ⏳ 待完成：将 Thread 模型迁移至 Coroutines + 可取消任务。
+  - [x] ✅ 子任务完成：提取 WebView 生命周期控制器（`WebViewLifecycleController`）。
+  - [ ] ⏳ 子任务：提取设置页状态管理到 ViewModel（代理状态、日志状态、开关状态）。
+- [x] ✅ 已完成：将 Thread 模型迁移至 Coroutines + 可取消任务（`ProxyManager` 网络任务协程化 + `disconnect` 取消子任务）。
 
 ## P2 指纹策略工程化
 
 - [ ] ⏳ 待完成：拆分 `SpoofingEngine` 巨型脚本为模块化注入单元。
+  - [ ] ⏳ 子任务：拆分 UA/ClientHints 模块。
+  - [ ] ⏳ 子任务：拆分 Canvas/WebGL 模块。
+  - [ ] ⏳ 子任务：拆分 RTC/Permissions/Timezone 模块。
 - [x] ✅ 已完成：建立注入成功率/异常率监控指标（`SpoofMetrics` + 设置页日志展示）。
 - [x] ✅ 已完成：建立检测站点回归基线并加入发布前检查（`regression-baseline.md`）。
 
